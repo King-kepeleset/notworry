@@ -1,0 +1,52 @@
+name: Build Web to APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      web_url:
+        description: 'URL Website'
+        required: true
+        type: string
+      app_name:
+        description: 'Nama Aplikasi'
+        required: true
+        type: string
+      icon_url:
+        description: 'URL Icon (256x256)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install PWA Builder
+        run: npm install -g pwa-cli
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build Web to APK
+        run: |
+          mkdir webapp
+          cd webapp
+          echo "📱 Building ${{ github.event.inputs.app_name }}"
+          pwa-cli build \
+            --url "${{ github.event.inputs.web_url }}" \
+            --name "${{ github.event.inputs.app_name }}" \
+            --icon "${{ github.event.inputs.icon_url }}" \
+            --output ./build
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapp-apk
+          path: webapp/build/*.apk
+          retention-days: 7
