@@ -11,6 +11,11 @@ on:
         description: 'URL Download ZIP'
         required: true
         type: string
+      build_type:                   
+        description: 'Build Type'
+        required: false
+        type: string
+        default: 'release'
 
 jobs:
   build:
