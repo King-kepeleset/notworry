@@ -11,11 +11,16 @@ on:
         description: 'URL Download ZIP'
         required: true
         type: string
+      build_type:
+        description: 'Build Type'
+        required: false
+        type: string
+        default: 'debug'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60  # ⭐ PERPANJANG TIMEOUT
+    timeout-minutes: 60
     
     steps:
       - name: Setup Flutter
@@ -29,7 +34,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Download Source (Support file besar)
+      - name: Download Source
         run: |
           echo "📥 Downloading from: ${{ github.event.inputs.release_url }}"
           curl -L -o source.zip \
@@ -38,15 +43,16 @@ jobs:
             --retry 3 \
             --retry-delay 5 \
             "${{ github.event.inputs.release_url }}"
-          
           echo "📦 File size: $(du -sh source.zip | cut -f1)"
           mkdir project
           unzip -q source.zip -d project
 
-      - name: Build APK
+      - name: Build APK Debug
         run: |
           cd project
+          echo "📦 Getting dependencies..."
           flutter pub get
+          echo "🔨 Building APK Debug..."
           flutter build apk --debug
 
       - name: Upload APK
@@ -55,4 +61,3 @@ jobs:
           name: app-debug
           path: project/build/app/outputs/flutter-apk/*.apk
           retention-days: 7
-          if-no-files-found: error
