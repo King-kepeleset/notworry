@@ -4,49 +4,100 @@ on:
   workflow_dispatch:
     inputs:
       web_url:
-        description: 'URL Website'
+        description: 'URL Website (contoh: https://example.com)'
         required: true
         type: string
       app_name:
-        description: 'Nama Aplikasi'
+        description: 'Nama Aplikasi (contoh: Toko Online Saya)'
         required: true
         type: string
       icon_url:
-        description: 'URL Icon (256x256)'
+        description: 'URL Icon (harus 256x256 PNG/JPG)'
         required: true
         type: string
+      build_type:
+        description: 'Build Type'
+        required: false
+        type: string
+        default: 'web2apk'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     
     steps:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Install PWA Builder
-        run: npm install -g pwa-cli
+        run: |
+          npm install -g pwabuilder
+          npm install -g @pwabuilder/cli
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y android-sdk
+          export ANDROID_HOME=/usr/lib/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
 
       - name: Build Web to APK
         run: |
-          mkdir webapp
+          echo "🌐 Building Web to APK..."
+          echo "📱 App Name: ${{ github.event.inputs.app_name }}"
+          echo "🔗 URL: ${{ github.event.inputs.web_url }}"
+          echo "🖼️ Icon: ${{ github.event.inputs.icon_url }}"
+          
+          mkdir -p webapp
           cd webapp
-          echo "📱 Building ${{ github.event.inputs.app_name }}"
-          pwa-cli build \
-            --url "${{ github.event.inputs.web_url }}" \
-            --name "${{ github.event.inputs.app_name }}" \
-            --icon "${{ github.event.inputs.icon_url }}" \
-            --output ./build
+          
+          # Download icon
+          curl -L -o icon.png "${{ github.event.inputs.icon_url }}"
+          
+          # Buat manifest.json
+          cat > manifest.json << EOF
+          {
+            "name": "${{ github.event.inputs.app_name }}",
+            "short_name": "${{ github.event.inputs.app_name }}",
+            "start_url": "${{ github.event.inputs.web_url }}",
+            "display": "standalone",
+            "background_color": "#ffffff",
+            "theme_color": "#000000",
+            "icons": [
+              {
+                "src": "icon.png",
+                "sizes": "256x256",
+                "type": "image/png"
+              }
+            ]
+          }
+          EOF
+          
+          echo "📄 Manifest created"
+          cat manifest.json
+          
+          # Build APK menggunakan pwabuilder
+          npx pwabuilder build --manifest manifest.json --platform android
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: webapp-apk
-          path: webapp/build/*.apk
+          path: |
+            webapp/*.apk
+            webapp/**/*.apk
+            webapp/android/*.apk
           retention-days: 7
+
+      - name: Build Success
+        if: success()
+        run: echo "✅ Web to APK build berhasil!"
