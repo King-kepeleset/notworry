@@ -11,11 +11,16 @@ on:
         description: 'URL Download ZIP'
         required: true
         type: string
+      build_type:
+        description: 'Build Type'
+        required: false
+        type: string
+        default: 'release'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60  # ⭐ PERPANJANG TIMEOUT JADI 60 MENIT
+    timeout-minutes: 60
     
     steps:
       - name: Setup Flutter
@@ -29,23 +34,20 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Download Source (Support file besar)
+      - name: Download Source
         run: |
           echo "📥 Downloading from: ${{ github.event.inputs.release_url }}"
-          # ⭐ PAKAI CURL DENGAN RESUME DAN TIMEOUT LEBIH LAMA
           curl -L -o source.zip \
             --connect-timeout 300 \
             --max-time 3600 \
             --retry 3 \
             --retry-delay 5 \
             "${{ github.event.inputs.release_url }}"
-          
           echo "📦 File size: $(du -sh source.zip | cut -f1)"
           mkdir project
           unzip -q source.zip -d project
-          echo "📂 Project extracted"
 
-      - name: Build APK
+      - name: Build APK Release
         run: |
           cd project
           echo "📦 Getting dependencies..."
@@ -59,5 +61,3 @@ jobs:
           name: app-release
           path: project/build/app/outputs/flutter-apk/*.apk
           retention-days: 7
-          # ⭐ TAMBAHKAN INI UNTUK FILE BESAR
-          if-no-files-found: error
