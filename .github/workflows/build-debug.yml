@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Build Tag'
+        description: 'Build Tag / ID'
         required: true
         type: string
       release_url:
-        description: 'URL Download ZIP'
+        description: 'URL Download ZIP (dari GitHub Release)'
         required: true
         type: string
       build_type:
-        description: 'Build Type'
+        description: 'Tipe Build (release/debug)'
         required: false
         type: string
         default: 'debug'
@@ -20,13 +20,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    
+    timeout-minutes: 60  # ⏱ 60 menit untuk file besar
+
     steps:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.24.0'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -34,7 +35,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Download Source
+      - name: Download Source Code (Support file besar)
         run: |
           echo "📥 Downloading from: ${{ github.event.inputs.release_url }}"
           curl -L -o source.zip \
@@ -43,9 +44,11 @@ jobs:
             --retry 3 \
             --retry-delay 5 \
             "${{ github.event.inputs.release_url }}"
+          
           echo "📦 File size: $(du -sh source.zip | cut -f1)"
           mkdir project
           unzip -q source.zip -d project
+          echo "📂 Project extracted"
 
       - name: Build APK Debug
         run: |
@@ -61,3 +64,8 @@ jobs:
           name: app-debug
           path: project/build/app/outputs/flutter-apk/*.apk
           retention-days: 7
+          if-no-files-found: error
+
+      - name: Build Success
+        if: success()
+        run: echo "✅ Build APK Debug berhasil!"
