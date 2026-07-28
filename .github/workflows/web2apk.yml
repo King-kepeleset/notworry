@@ -15,17 +15,12 @@ on:
         description: 'URL Icon (harus 256x256 PNG/JPG)'
         required: true
         type: string
-      build_type:
-        description: 'Build Type'
-        required: false
-        type: string
-        default: 'web2apk'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    
+
     steps:
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -43,19 +38,10 @@ jobs:
           npm install -g pwabuilder
           npm install -g @pwabuilder/cli
 
-      - name: Install Android SDK
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y android-sdk
-          export ANDROID_HOME=/usr/lib/android-sdk
-          export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
-
       - name: Build Web to APK
         run: |
           echo "🌐 Building Web to APK..."
           echo "📱 App Name: ${{ github.event.inputs.app_name }}"
-          echo "🔗 URL: ${{ github.event.inputs.web_url }}"
-          echo "🖼️ Icon: ${{ github.event.inputs.icon_url }}"
           
           mkdir -p webapp
           cd webapp
@@ -83,9 +69,8 @@ jobs:
           EOF
           
           echo "📄 Manifest created"
-          cat manifest.json
           
-          # Build APK menggunakan pwabuilder
+          # Build APK
           npx pwabuilder build --manifest manifest.json --platform android
 
       - name: Upload APK
